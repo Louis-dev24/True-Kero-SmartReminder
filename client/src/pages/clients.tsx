@@ -19,7 +19,7 @@ export default function Clients() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.append("search", search);
-      if (statusFilter) params.append("status", statusFilter);
+      if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
       
       const response = await fetch(`/api/clients?${params}`);
       if (!response.ok) throw new Error("Failed to fetch clients");
@@ -99,7 +99,7 @@ export default function Clients() {
                       <SelectValue placeholder="Tous" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tous</SelectItem>
+                      <SelectItem value="all">Tous</SelectItem>
                       <SelectItem value="up_to_date">À jour</SelectItem>
                       <SelectItem value="expired">Expiré</SelectItem>
                       <SelectItem value="expires_soon">Expire bientôt</SelectItem>
