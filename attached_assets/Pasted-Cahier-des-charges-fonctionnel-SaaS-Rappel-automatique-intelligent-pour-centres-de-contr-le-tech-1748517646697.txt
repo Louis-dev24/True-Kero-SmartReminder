@@ -1,0 +1,150 @@
+Cahier des charges fonctionnel – SaaS “Rappel automatique intelligent” pour centres de contrôle technique
+1. Présentation du projet
+Objectif :
+Développer un logiciel SaaS ultra simple permettant aux centres de contrôle technique de gérer leurs clients et rendez-vous, et d’automatiser l’envoi de rappels (SMS + email) avant les échéances importantes, sans complexité technique pour l’utilisateur final.
+
+2. Utilisateurs cibles
+Personnel administratif des centres de contrôle technique (utilisateur principal)
+
+Clients finaux du centre (bénéficiaires des rappels et prise de RDV en ligne)
+
+3. Fonctionnalités principales (MVP)
+3.1 Tableau de bord
+Vue calendrier des rendez-vous à venir
+
+Liste des clients avec filtres (par nom, date de RDV, etc.)
+
+Alertes :
+
+Clients à relancer (prochain contrôle technique à prévoir)
+
+RDV à venir (dans la semaine, le jour même, etc.)
+
+3.2 Gestion des clients
+Fiche client :
+
+Nom, prénom
+
+Téléphone (obligatoire)
+
+Email (optionnel)
+
+Date du dernier contrôle technique
+
+Date du prochain RDV
+
+Historique des rappels envoyés (SMS/email)
+
+Ajout/modification/suppression de clients (manuellement ou via import CSV)
+
+Recherche rapide par nom, téléphone, email
+
+3.3 Gestion des rendez-vous
+Planification manuelle d’un RDV (depuis la fiche client ou le planning)
+
+Enregistrement automatique d’un RDV via la prise de RDV en ligne
+
+Modification/suppression de RDV
+
+Lien entre client et RDV (chaque RDV est associé à un client)
+
+3.4 Système de rappels automatiques
+Programmation des rappels :
+
+Choix des fréquences (J-30, J-15, J-7, veille de RDV)
+
+Sélection des canaux (SMS, email, ou les deux)
+
+Templates de messages personnalisables :
+
+Variables dynamiques (prénom, nom du centre, date, lien de RDV)
+
+Aperçu du message avant envoi
+
+Envoi automatique :
+
+Intégration avec plateformes SMS (Twilio, SMSFactor)
+
+Intégration avec plateformes email (SendGrid, Mailersend)
+
+Planification basée sur les dates de RDV/contrôle technique
+
+3.5 Prise de rendez-vous en ligne
+Page publique en marque blanche (personnalisée au nom du centre)
+
+Formulaire de prise de RDV (nom, prénom, téléphone, email, date souhaitée)
+
+Connexion au CRM interne (création automatique du client/RDV)
+
+Confirmation automatique par SMS/email
+
+3.6 Interface utilisateur
+Navigation ultra simple (2-3 clics max pour chaque action)
+
+Pas de jargon technique
+
+Responsive : accessible sur PC et tablette (mobile en bonus)
+
+Design moderne et épuré (UI Tailwind CSS)
+
+3.7 Suivi et administration
+Historique des envois (SMS/email) par client et par RDV
+
+Statistiques :
+
+Nombre de rappels envoyés
+
+Taux d’ouverture (si possible pour les emails)
+
+Nombre de RDV pris via la plateforme
+
+Gestion de la facturation (abonnement SaaS, suivi de la consommation SMS/email)
+
+4. Architecture technique
+4.1 Backend
+Langage : Node.js/Express ou Django (Python)
+
+Base de données : PostgreSQL ou Firebase
+
+4.2 Frontend
+Framework : React (Next.js ou Vite)
+
+UI : Tailwind CSS
+
+4.3 Notifications
+SMS : Twilio ou SMSFactor
+
+Email : SendGrid ou Mailersend
+
+4.4 Hébergement
+Railway, Render, Vercel, ou Firebase (selon stack choisie)
+
+4.5 Automatisation
+Gestion des tâches planifiées : cron jobs, Temporal, Agenda.js ou BullMQ
+
+5. Découpage en modules (MVP)
+Module client : gestion des clients (CRUD)
+
+Module planning : gestion des RDV (manuel + en ligne)
+
+Module rappels : configuration et gestion des rappels (templates, fréquence, canaux)
+
+Module admin : suivi des envois, statistiques, facturation
+
+6. Contraintes et exigences
+Sécurité : RGPD (stockage et traitement des données personnelles)
+
+Simplicité : aucune compétence technique requise pour l’utilisateur
+
+Performance : rapidité d’exécution, notifications en temps et en heure
+
+Scalabilité : support de plusieurs centres avec séparation des données
+
+7. Livrables attendus
+Application web SaaS fonctionnelle
+
+Documentation utilisateur simple (PDF/vidéo)
+
+Documentation technique (API, schéma BDD, architecture)
+
+Procédures de déploiement et de sauvegarde
