@@ -206,7 +206,7 @@ L'équipe de {CENTER_NAME}`
                 <Label htmlFor="type">Type de rappel *</Label>
                 <Select 
                   value={form.watch("type")} 
-                  onValueChange={(value) => form.setValue("type", value as "email" | "sms")}
+                  onValueChange={(value: "email" | "sms") => form.setValue("type", value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -238,7 +238,7 @@ L'équipe de {CENTER_NAME}`
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"
-                  checked={form.watch("isActive")}
+                  checked={form.watch("isActive") ?? true}
                   onCheckedChange={(checked) => form.setValue("isActive", checked)}
                 />
                 <Label htmlFor="isActive">Modèle actif</Label>
