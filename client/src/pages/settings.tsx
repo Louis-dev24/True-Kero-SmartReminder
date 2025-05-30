@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Building2, Clock, Bell, Save } from "lucide-react";
+import { Building2, Clock, Bell, Save, MessageSquare, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -156,10 +156,11 @@ export default function CenterSettings() {
       <main className="flex-1 overflow-y-auto">
         <div className="px-4 sm:px-6 lg:px-8 py-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="general">Informations générales</TabsTrigger>
               <TabsTrigger value="hours">Horaires</TabsTrigger>
               <TabsTrigger value="booking">Réservations</TabsTrigger>
+              <TabsTrigger value="sms">Configuration SMS</TabsTrigger>
             </TabsList>
 
             <TabsContent value="general" className="space-y-6">

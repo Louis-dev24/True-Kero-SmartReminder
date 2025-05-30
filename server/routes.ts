@@ -367,6 +367,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send manual SMS reminder
+  app.post('/api/reminders/send-sms', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { clientId } = req.body;
+      
+      if (!clientId) {
+        return res.status(400).json({ message: "Client ID is required" });
+      }
+
+      const { sendReminderSMS } = await import('./reminderService');
+      const client = await storage.getClient(clientId, userId);
+      
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      if (!client.phone) {
+        return res.status(400).json({ message: "Client has no phone number" });
+      }
+
+      if (!client.nextInspectionDate) {
+        return res.status(400).json({ message: "Client has no next inspection date" });
+      }
+
+      const user = await storage.getUser(userId);
+      const centerName = user?.centerName || 'Centre de contrôle technique';
+      
+      const reminderCheck = {
+        client,
+        daysTillExpiration: Math.ceil((new Date(client.nextInspectionDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
+        expirationDate: new Date(client.nextInspectionDate)
+      };
+
+      const success = await sendReminderSMS(userId, reminderCheck, centerName);
+      
+      if (success) {
+        res.json({ message: "SMS reminder sent successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to send SMS reminder" });
+      }
+    } catch (error) {
+      console.error("Error sending SMS reminder:", error);
+      res.status(500).json({ message: "Failed to send SMS reminder" });
+    }
+  });
+
   // Center settings routes
   app.get('/api/center-settings', isAuthenticated, async (req: any, res) => {
     try {

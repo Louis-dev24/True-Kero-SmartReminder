@@ -11,7 +11,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit, Calendar, Trash2, Users } from "lucide-react";
+import { Edit, Calendar, Trash2, Users, Mail, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -45,6 +45,44 @@ export default function ClientTable({ clients, isLoading, onEditClient, onRefres
       toast({
         title: "Erreur",
         description: "Impossible de supprimer le client.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendEmailReminderMutation = useMutation({
+    mutationFn: async (clientId: number) => {
+      return apiRequest("POST", "/api/reminders/send-manual", { clientId });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email envoyé",
+        description: "Le rappel par email a été envoyé avec succès.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'envoyer le rappel par email.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendSMSReminderMutation = useMutation({
+    mutationFn: async (clientId: number) => {
+      return apiRequest("POST", "/api/reminders/send-sms", { clientId });
+    },
+    onSuccess: () => {
+      toast({
+        title: "SMS envoyé",
+        description: "Le rappel par SMS a été envoyé avec succès.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'envoyer le rappel par SMS.",
         variant: "destructive",
       });
     },
@@ -244,6 +282,7 @@ export default function ClientTable({ clients, isLoading, onEditClient, onRefres
                         size="sm"
                         onClick={() => onEditClient(client)}
                         className="text-primary-600 hover:text-primary-900"
+                        title="Modifier le client"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -251,15 +290,41 @@ export default function ClientTable({ clients, isLoading, onEditClient, onRefres
                         variant="ghost"
                         size="sm"
                         className="text-green-600 hover:text-green-900"
+                        title="Planifier un rendez-vous"
                       >
                         <Calendar className="h-4 w-4" />
                       </Button>
+                      {client.email && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => sendEmailReminderMutation.mutate(client.id)}
+                          disabled={sendEmailReminderMutation.isPending}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Envoyer rappel par email"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {client.phone && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => sendSMSReminderMutation.mutate(client.id)}
+                          disabled={sendSMSReminderMutation.isPending}
+                          className="text-purple-600 hover:text-purple-900"
+                          title="Envoyer rappel par SMS"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteClick(client)}
                         disabled={deleteMutation.isPending}
                         className="text-red-600 hover:text-red-900"
+                        title="Supprimer le client"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
