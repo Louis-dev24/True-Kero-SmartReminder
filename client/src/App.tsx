@@ -12,6 +12,7 @@ import Appointments from "@/pages/appointments";
 import Reminders from "@/pages/reminders";
 import Booking from "@/pages/booking";
 import Statistics from "@/pages/statistics";
+import CenterSettings from "@/pages/settings";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
           <Route path="/reminders" component={Reminders} />
           <Route path="/booking" component={Booking} />
           <Route path="/statistics" component={Statistics} />
+          <Route path="/settings" component={CenterSettings} />
           <Route component={NotFound} />
         </Switch>
       </div>

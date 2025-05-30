@@ -10,6 +10,7 @@ import {
   Bell, 
   Globe, 
   BarChart3,
+  Settings,
   Menu,
   X
 } from "lucide-react";
