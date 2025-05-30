@@ -41,13 +41,13 @@ export default function Clients() {
   return (
     <>
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-card shadow-sm border-b border-border">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="py-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Gestion des clients</h1>
-                <p className="mt-1 text-sm text-gray-500">
+                <h1 className="text-2xl font-semibold text-foreground">Gestion des clients</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
                   Gérez vos clients et leurs informations de contrôle technique
                 </p>
               </div>
@@ -70,11 +70,11 @@ export default function Clients() {
       <main className="flex-1 overflow-y-auto">
         <div className="px-4 sm:px-6 lg:px-8 py-6">
           {/* Search and Filters */}
-          <div className="bg-white rounded-lg shadow mb-6">
+          <div className="bg-card rounded-lg shadow mb-6">
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Rechercher un client
                   </label>
                   <div className="relative">
@@ -86,12 +86,12 @@ export default function Clients() {
                       className="pl-10"
                     />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <Search className="h-4 w-4 text-gray-400" />
+                      <Search className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Statut contrôle
                   </label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -107,7 +107,7 @@ export default function Clients() {
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Trier par
                   </label>
                   <Select>
