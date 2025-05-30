@@ -573,6 +573,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Schedule management routes
+  app.get('/api/schedule/available-slots', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const date = new Date(req.query.date as string);
+      const duration = parseInt(req.query.duration as string) || 30;
+      const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
+
+      const { scheduleService } = await import('./scheduleService');
+      const slots = await scheduleService.getAvailableSlots(userId, {
+        date,
+        duration,
+        excludeAppointmentId: excludeId
+      });
+
+      res.json(slots);
+    } catch (error) {
+      console.error("Error fetching available slots:", error);
+      res.status(500).json({ message: "Failed to fetch available slots" });
+    }
+  });
+
+  app.post('/api/schedule/check-conflict', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { appointmentDate, duration, excludeAppointmentId } = req.body;
+
+      const { scheduleService } = await import('./scheduleService');
+      const conflict = await scheduleService.checkConflict(
+        userId,
+        new Date(appointmentDate),
+        duration || 30,
+        excludeAppointmentId
+      );
+
+      res.json(conflict);
+    } catch (error) {
+      console.error("Error checking conflict:", error);
+      res.status(500).json({ message: "Failed to check conflict" });
+    }
+  });
+
+  app.get('/api/schedule/next-available', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const preferredDate = new Date(req.query.date as string);
+      const duration = parseInt(req.query.duration as string) || 30;
+
+      const { scheduleService } = await import('./scheduleService');
+      const nextSlot = await scheduleService.findNextAvailableSlot(userId, preferredDate, duration);
+
+      res.json(nextSlot);
+    } catch (error) {
+      console.error("Error finding next available slot:", error);
+      res.status(500).json({ message: "Failed to find next available slot" });
+    }
+  });
+
+  app.get('/api/schedule/day-capacity', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const date = new Date(req.query.date as string);
+
+      const { scheduleService } = await import('./scheduleService');
+      const capacity = await scheduleService.getDayCapacity(userId, date);
+
+      res.json(capacity);
+    } catch (error) {
+      console.error("Error fetching day capacity:", error);
+      res.status(500).json({ message: "Failed to fetch day capacity" });
+    }
+  });
+
   // Public booking route (no authentication required)
   app.post('/api/public/booking/:centerSlug', async (req, res) => {
     try {

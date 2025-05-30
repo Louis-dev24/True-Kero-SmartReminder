@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AppointmentForm from "@/components/appointments/appointment-form";
 import CalendarView from "@/components/calendar/calendar-view";
+import DayCapacityIndicator from "@/components/appointments/day-capacity-indicator";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -144,7 +145,7 @@ export default function Appointments() {
                         Calendrier
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                       <Calendar
                         mode="single"
                         selected={selectedDate}
