@@ -39,6 +39,8 @@ type WorkingHoursData = z.infer<typeof workingHoursSchema>;
 
 export default function CenterSettings() {
   const [activeTab, setActiveTab] = useState("general");
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
+  const [testMessage, setTestMessage] = useState("Test SMS depuis TechControl Pro");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -104,6 +106,46 @@ export default function CenterSettings() {
       ...data,
       workingHours,
     });
+  };
+
+  const testSMSMutation = useMutation({
+    mutationFn: async ({ phone, message }: { phone: string; message: string }) => {
+      const response = await fetch('/api/test-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, message }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de l\'envoi du SMS');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "SMS de test envoyé",
+        description: "Le SMS de test a été envoyé avec succès.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'envoyer le SMS de test.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleTestSMS = () => {
+    if (!testPhoneNumber) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez saisir un numéro de téléphone.",
+        variant: "destructive",
+      });
+      return;
+    }
+    testSMSMutation.mutate({ phone: testPhoneNumber, message: testMessage });
   };
 
   const updateWorkingHours = (day: keyof WorkingHoursData, field: keyof WorkingHoursData[keyof WorkingHoursData], value: any) => {
@@ -352,6 +394,106 @@ export default function CenterSettings() {
                       {updateSettingsMutation.isPending ? "Sauvegarde..." : "Sauvegarder"}
                     </Button>
                   </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="sms" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <MessageSquare className="mr-2 h-5 w-5" />
+                    Configuration SMS
+                  </CardTitle>
+                  <CardDescription>
+                    Testez et configurez les rappels SMS automatiques
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Status de la configuration */}
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <MessageSquare className="w-4 h-4 text-green-600" />
+                        </div>
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-green-800">
+                          Service SMS configuré
+                        </h3>
+                        <p className="text-sm text-green-700 mt-1">
+                          Twilio est configuré et prêt à envoyer des SMS
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Test SMS */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Tester l'envoi de SMS</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <Label htmlFor="testPhoneNumber">Numéro de téléphone de test</Label>
+                        <Input
+                          id="testPhoneNumber"
+                          type="tel"
+                          value={testPhoneNumber}
+                          onChange={(e) => setTestPhoneNumber(e.target.value)}
+                          placeholder="+33 6 12 34 56 78"
+                          className="mt-1"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          Format international requis (ex: +33612345678)
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="testMessage">Message de test</Label>
+                        <Textarea
+                          id="testMessage"
+                          value={testMessage}
+                          onChange={(e) => setTestMessage(e.target.value)}
+                          placeholder="Message de test..."
+                          rows={3}
+                          className="mt-1"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          {testMessage.length}/160 caractères
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleTestSMS}
+                        disabled={testSMSMutation.isPending || !testPhoneNumber}
+                        className="w-fit"
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        {testSMSMutation.isPending ? "Envoi en cours..." : "Envoyer SMS de test"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Informations sur les SMS */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Fonctionnement des rappels SMS</h3>
+                    <div className="space-y-3 text-sm text-gray-600">
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <p>Les SMS sont envoyés automatiquement aux clients ayant un numéro de téléphone renseigné</p>
+                      </div>
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <p>Les rappels sont envoyés en même temps que les emails pour maximiser les chances de contact</p>
+                      </div>
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <p>Vous pouvez envoyer des rappels manuels depuis la page des clients en cliquant sur l'icône SMS</p>
+                      </div>
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <p>Les messages incluent automatiquement une option de désinscription (STOP)</p>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

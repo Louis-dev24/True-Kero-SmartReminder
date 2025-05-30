@@ -414,6 +414,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test SMS endpoint
+  app.post('/api/test-sms', isAuthenticated, async (req: any, res) => {
+    try {
+      const { phone, message } = req.body;
+      
+      if (!phone || !message) {
+        return res.status(400).json({ message: "Phone number and message are required" });
+      }
+
+      const { sendSMS } = await import('./smsService');
+      const result = await sendSMS({
+        to: phone,
+        message: message
+      });
+
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: "SMS sent successfully",
+          messageId: result.messageId 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: result.error || "Failed to send SMS" 
+        });
+      }
+    } catch (error: any) {
+      console.error("Error sending test SMS:", error);
+      res.status(500).json({ message: error.message || "Failed to send test SMS" });
+    }
+  });
+
   // Center settings routes
   app.get('/api/center-settings', isAuthenticated, async (req: any, res) => {
     try {
