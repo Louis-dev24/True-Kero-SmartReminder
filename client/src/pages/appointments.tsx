@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Calendar as CalendarIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Calendar as CalendarIcon, List, Grid } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AppointmentForm from "@/components/appointments/appointment-form";
+import CalendarView from "@/components/calendar/calendar-view";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -14,6 +16,7 @@ export default function Appointments() {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
 
   const startDate = startOfMonth(selectedDate);
   const endDate = endOfMonth(selectedDate);
@@ -73,6 +76,15 @@ export default function Appointments() {
     refetch();
   };
 
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    setShowAppointmentForm(true);
+  };
+
+  const handleAppointmentClick = (appointment: any) => {
+    handleEditAppointment(appointment);
+  };
+
   return (
     <>
       {/* Header */}
@@ -100,12 +112,34 @@ export default function Appointments() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Calendar */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "calendar" | "list")}>
+            <TabsList className="mb-6">
+              <TabsTrigger value="calendar" className="flex items-center">
+                <Grid className="mr-2 h-4 w-4" />
+                Vue calendrier
+              </TabsTrigger>
+              <TabsTrigger value="list" className="flex items-center">
+                <List className="mr-2 h-4 w-4" />
+                Vue liste
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="calendar">
+              <CalendarView
+                appointments={appointments || []}
+                onDateClick={handleDateClick}
+                onAppointmentClick={handleAppointmentClick}
+                isLoading={isLoading}
+              />
+            </TabsContent>
+
+            <TabsContent value="list">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Sidebar Calendar */}
+                <div className="lg:col-span-1">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
                     <CalendarIcon className="mr-2 h-5 w-5" />
                     Calendrier
                   </CardTitle>
