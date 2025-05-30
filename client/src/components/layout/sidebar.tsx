@@ -10,6 +10,7 @@ import {
   Bell, 
   Globe, 
   BarChart3,
+  FileText,
   Settings,
   Menu,
   X
@@ -28,6 +29,7 @@ export default function Sidebar() {
     { name: "Rappels automatiques", href: "/reminders", icon: Bell },
     { name: "Prise de RDV en ligne", href: "/booking", icon: Globe },
     { name: "Statistiques", href: "/statistics", icon: BarChart3 },
+    { name: "Rapports et exports", href: "/reports", icon: FileText },
     { name: "Paramètres", href: "/settings", icon: Settings },
   ];
 

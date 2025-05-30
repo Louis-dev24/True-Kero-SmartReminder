@@ -474,6 +474,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export routes
+  app.get('/api/export/clients', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const format = req.query.format as 'xlsx' | 'csv' | 'pdf' || 'xlsx';
+      
+      const { exportService } = await import('./exportService');
+      const buffer = await exportService.exportClients(userId, { format });
+      
+      const contentType = format === 'pdf' ? 'application/pdf' : 
+                         format === 'csv' ? 'text/csv' : 
+                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      
+      const filename = `clients_${new Date().toISOString().split('T')[0]}.${format}`;
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting clients:", error);
+      res.status(500).json({ message: "Failed to export clients" });
+    }
+  });
+
+  app.get('/api/export/appointments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const format = req.query.format as 'xlsx' | 'csv' | 'pdf' || 'xlsx';
+      const startDate = req.query.start ? new Date(req.query.start as string) : undefined;
+      const endDate = req.query.end ? new Date(req.query.end as string) : undefined;
+      
+      const { exportService } = await import('./exportService');
+      const buffer = await exportService.exportAppointments(userId, { 
+        format,
+        dateRange: startDate && endDate ? { start: startDate, end: endDate } : undefined
+      });
+      
+      const contentType = format === 'pdf' ? 'application/pdf' : 
+                         format === 'csv' ? 'text/csv' : 
+                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      
+      const filename = `appointments_${new Date().toISOString().split('T')[0]}.${format}`;
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting appointments:", error);
+      res.status(500).json({ message: "Failed to export appointments" });
+    }
+  });
+
+  app.get('/api/export/reminders', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const format = req.query.format as 'xlsx' | 'csv' | 'pdf' || 'xlsx';
+      
+      const { exportService } = await import('./exportService');
+      const buffer = await exportService.exportReminderLogs(userId, { format });
+      
+      const contentType = format === 'pdf' ? 'application/pdf' : 
+                         format === 'csv' ? 'text/csv' : 
+                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      
+      const filename = `reminders_${new Date().toISOString().split('T')[0]}.${format}`;
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error exporting reminders:", error);
+      res.status(500).json({ message: "Failed to export reminders" });
+    }
+  });
+
+  app.get('/api/export/monthly-report', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const month = parseInt(req.query.month as string);
+      const year = parseInt(req.query.year as string);
+      
+      if (!month || !year || month < 1 || month > 12) {
+        return res.status(400).json({ message: "Invalid month or year" });
+      }
+      
+      const { exportService } = await import('./exportService');
+      const buffer = await exportService.generateMonthlyReport(userId, month, year);
+      
+      const filename = `rapport_mensuel_${year}_${month.toString().padStart(2, '0')}.pdf`;
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error generating monthly report:", error);
+      res.status(500).json({ message: "Failed to generate monthly report" });
+    }
+  });
+
   // Public booking route (no authentication required)
   app.post('/api/public/booking/:centerSlug', async (req, res) => {
     try {
