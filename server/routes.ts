@@ -298,6 +298,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reminder routes
+  app.get('/api/reminders/check', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { findClientsNeedingReminders } = await import('./reminderService');
+      
+      const remindersNeeded = await findClientsNeedingReminders(userId, 30);
+      res.json(remindersNeeded);
+    } catch (error) {
+      console.error("Error checking reminders:", error);
+      res.status(500).json({ message: "Failed to check reminders" });
+    }
+  });
+
+  app.post('/api/reminders/send-manual', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { clientId } = req.body;
+      
+      if (!clientId) {
+        return res.status(400).json({ message: "Client ID is required" });
+      }
+
+      const { sendReminderEmail } = await import('./reminderService');
+      const client = await storage.getClient(clientId, userId);
+      
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      if (!client.nextInspectionDate) {
+        return res.status(400).json({ message: "Client has no next inspection date" });
+      }
+
+      const user = await storage.getUser(userId);
+      const centerName = user?.centerName || 'Centre de contrôle technique';
+      
+      const reminderCheck = {
+        client,
+        daysTillExpiration: Math.ceil((new Date(client.nextInspectionDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
+        expirationDate: new Date(client.nextInspectionDate)
+      };
+
+      const success = await sendReminderEmail(userId, reminderCheck, centerName);
+      
+      if (success) {
+        res.json({ message: "Reminder sent successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to send reminder" });
+      }
+    } catch (error) {
+      console.error("Error sending manual reminder:", error);
+      res.status(500).json({ message: "Failed to send reminder" });
+    }
+  });
+
+  app.post('/api/reminders/send-automatic', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { processAutomaticReminders } = await import('./reminderService');
+      
+      const result = await processAutomaticReminders(userId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error processing automatic reminders:", error);
+      res.status(500).json({ message: "Failed to process automatic reminders" });
+    }
+  });
+
   // Center settings routes
   app.get('/api/center-settings', isAuthenticated, async (req: any, res) => {
     try {

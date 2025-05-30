@@ -1,58 +1,111 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Bell, Mail, MessageSquare, Calendar, TrendingUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Bell, Mail, MessageSquare, Clock, CheckCircle, XCircle, Plus, Send, AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Reminders() {
-  const { data: templates, isLoading: templatesLoading } = useQuery({
+  const [activeTab, setActiveTab] = useState("pending");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: pendingReminders, isLoading: pendingLoading } = useQuery({
+    queryKey: ["/api/reminders/check"],
+  });
+
+  const { data: reminderTemplates, isLoading: templatesLoading } = useQuery({
     queryKey: ["/api/reminder-templates"],
   });
 
-  const { data: logs, isLoading: logsLoading } = useQuery({
+  const { data: reminderLogs, isLoading: logsLoading } = useQuery({
     queryKey: ["/api/reminder-logs"],
   });
 
-  // Mock statistics for demonstration
-  const stats = {
-    smsSent: 1247,
-    emailsSent: 892,
-    responseRate: 23,
-    appointmentRate: 67,
+  const sendAutomaticRemindersMutation = useMutation({
+    mutationFn: () => apiRequest('/api/reminders/send-automatic', { method: 'POST' }),
+    onSuccess: (result) => {
+      toast({
+        title: "Rappels envoyés",
+        description: `${result.sent} rappels envoyés avec succès, ${result.failed} échecs sur ${result.total} clients`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/reminder-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reminders/check"] });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'envoyer les rappels automatiques",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendManualReminderMutation = useMutation({
+    mutationFn: (clientId: number) => 
+      apiRequest('/api/reminders/send-manual', { 
+        method: 'POST', 
+        body: JSON.stringify({ clientId }) 
+      }),
+    onSuccess: () => {
+      toast({
+        title: "Rappel envoyé",
+        description: "Le rappel a été envoyé avec succès",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/reminder-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reminders/check"] });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'envoyer le rappel",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  const recentActivity = [
-    {
-      id: 1,
-      type: "sms",
-      description: "45 SMS de rappel envoyés",
-      time: "Il y a 2 heures",
-      icon: MessageSquare,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
-    },
-    {
-      id: 2,
-      type: "email",
-      description: "32 emails de rappel envoyés",
-      time: "Il y a 4 heures",
-      icon: Mail,
-      bgColor: "bg-blue-100",
-      color: "text-blue-600",
-    },
-    {
-      id: 3,
-      type: "appointment",
-      description: "8 nouveaux RDV pris",
-      time: "Hier",
-      icon: Calendar,
-      bgColor: "bg-yellow-100",
-      color: "text-yellow-600",
-    },
-  ];
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'sent':
+        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Envoyé</Badge>;
+      case 'failed':
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Échec</Badge>;
+      case 'pending':
+        return <Badge variant="outline"><Clock className="w-3 h-3 mr-1" />En attente</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getTypeBadge = (type: string) => {
+    return type === 'email' ? 
+      <Badge variant="outline"><Mail className="w-3 h-3 mr-1" />Email</Badge> :
+      <Badge variant="outline"><MessageSquare className="w-3 h-3 mr-1" />SMS</Badge>;
+  };
+
+  const getUrgencyBadge = (days: number) => {
+    if (days <= 7) {
+      return <Badge variant="destructive">Urgent ({days}j)</Badge>;
+    } else if (days <= 15) {
+      return <Badge variant="default" className="bg-orange-500">Bientôt ({days}j)</Badge>;
+    } else {
+      return <Badge variant="outline">Dans {days}j</Badge>;
+    }
+  };
 
   return (
     <>
@@ -62,12 +115,20 @@ export default function Reminders() {
           <div className="py-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Rappels automatiques</h1>
+                <h1 className="text-2xl font-semibold text-gray-900">Gestion des rappels</h1>
                 <p className="mt-1 text-sm text-gray-500">
-                  Configurez et gérez vos campagnes de rappels SMS et email
+                  Configurez et suivez les rappels automatiques pour vos clients
                 </p>
               </div>
               <div className="flex space-x-3">
+                <Button 
+                  variant="outline"
+                  onClick={() => sendAutomaticRemindersMutation.mutate()}
+                  disabled={sendAutomaticRemindersMutation.isPending}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {sendAutomaticRemindersMutation.isPending ? "Envoi..." : "Envoyer rappels automatiques"}
+                </Button>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
                   Nouveau template
@@ -81,195 +142,185 @@ export default function Reminders() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Configuration Section */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configuration des rappels</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fréquence des rappels
-                    </label>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="30days" defaultChecked />
-                        <label htmlFor="30days" className="text-sm text-gray-700">
-                          30 jours avant échéance
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="15days" defaultChecked />
-                        <label htmlFor="15days" className="text-sm text-gray-700">
-                          15 jours avant échéance
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="7days" defaultChecked />
-                        <label htmlFor="7days" className="text-sm text-gray-700">
-                          7 jours avant échéance
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="1day" />
-                        <label htmlFor="1day" className="text-sm text-gray-700">
-                          Veille de l'échéance
-                        </label>
-                      </div>
-                    </div>
-                  </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="pending">Rappels à envoyer</TabsTrigger>
+              <TabsTrigger value="logs">Historique</TabsTrigger>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+              <TabsTrigger value="settings">Paramètres</TabsTrigger>
+            </TabsList>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Canaux de communication
-                    </label>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="sms" defaultChecked />
-                        <label htmlFor="sms" className="text-sm text-gray-700">
-                          SMS
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="email" defaultChecked />
-                        <label htmlFor="email" className="text-sm text-gray-700">
-                          Email
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Heure d'envoi
-                    </label>
-                    <Select defaultValue="09:00">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="09:00">09:00</SelectItem>
-                        <SelectItem value="10:00">10:00</SelectItem>
-                        <SelectItem value="11:00">11:00</SelectItem>
-                        <SelectItem value="14:00">14:00</SelectItem>
-                        <SelectItem value="15:00">15:00</SelectItem>
-                        <SelectItem value="16:00">16:00</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Templates Management */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Templates de messages</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-medium text-gray-900 flex items-center">
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          SMS - Rappel 30 jours
-                        </h4>
-                        <Button variant="ghost" size="sm">
-                          Modifier
-                        </Button>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Bonjour {"{"}prenom{"}"}, votre contrôle technique expire le {"{"}date_echeance{"}"}. 
-                        Prenez RDV sur {"{"}lien_rdv{"}"} - {"{"}nom_centre{"}"}
-                      </p>
-                    </div>
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-medium text-gray-900 flex items-center">
-                          <Mail className="mr-2 h-4 w-4" />
-                          Email - Rappel 15 jours
-                        </h4>
-                        <Button variant="ghost" size="sm">
-                          Modifier
-                        </Button>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Sujet: Rappel contrôle technique - {"{"}nom_centre{"}"}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Statistics and History */}
-            <div className="space-y-6">
+            <TabsContent value="pending" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
-                    <TrendingUp className="mr-2 h-5 w-5" />
-                    Statistiques
+                    <AlertTriangle className="mr-2 h-5 w-5 text-orange-500" />
+                    Clients nécessitant un rappel
                   </CardTitle>
+                  <CardDescription>
+                    Contrôles techniques arrivant à expiration dans les 30 prochains jours
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {stats.smsSent.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-500">SMS envoyés ce mois</div>
+                  {pendingLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {stats.emailsSent.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-500">Emails envoyés ce mois</div>
+                  ) : pendingReminders && pendingReminders.length > 0 ? (
+                    <div className="space-y-4">
+                      <Alert>
+                        <Bell className="h-4 w-4" />
+                        <AlertDescription>
+                          {pendingReminders.length} client(s) nécessitent un rappel. Vous pouvez les envoyer automatiquement ou individuellement.
+                        </AlertDescription>
+                      </Alert>
+                      
+                      {pendingReminders.map((reminder: any) => (
+                        <div key={reminder.client.id} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div>
+                                <h4 className="font-medium">
+                                  {reminder.client.firstName} {reminder.client.lastName}
+                                </h4>
+                                <p className="text-sm text-gray-500">
+                                  {reminder.client.email} • {reminder.client.phone}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {reminder.client.vehicleBrand} {reminder.client.vehicleModel} • {reminder.client.licensePlate}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {getUrgencyBadge(reminder.daysTillExpiration)}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => sendManualReminderMutation.mutate(reminder.client.id)}
+                                disabled={sendManualReminderMutation.isPending}
+                              >
+                                <Mail className="w-3 h-3 mr-1" />
+                                Envoyer
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-sm text-gray-600">
+                            Expiration: {new Date(reminder.expirationDate).toLocaleDateString('fr-FR')}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-semibold text-primary">
-                        {stats.responseRate}%
-                      </div>
-                      <div className="text-sm text-gray-500">Taux de réponse</div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <CheckCircle className="mx-auto h-12 w-12 text-green-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun rappel nécessaire</h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Tous vos clients sont à jour avec leurs contrôles techniques.
+                      </p>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-semibold text-green-600">
-                        {stats.appointmentRate}%
-                      </div>
-                      <div className="text-sm text-gray-500">Taux de prise RDV</div>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
+            </TabsContent>
 
-              {/* Recent Activity */}
+            <TabsContent value="logs" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Bell className="mr-2 h-5 w-5" />
-                    Activité récente
+                    Historique des rappels
                   </CardTitle>
+                  <CardDescription>
+                    Liste de tous les rappels envoyés à vos clients
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <div className={`w-8 h-8 ${activity.bgColor} rounded-full flex items-center justify-center`}>
-                            <activity.icon className={`h-4 w-4 ${activity.color}`} />
+                  {logsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : reminderLogs && reminderLogs.length > 0 ? (
+                    <div className="space-y-4">
+                      {reminderLogs.map((log: any) => (
+                        <div key={log.id} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              {getTypeBadge(log.type)}
+                              {getStatusBadge(log.status)}
+                              <span className="font-medium">Client #{log.clientId}</span>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              {formatDate(log.createdAt)}
+                            </span>
                           </div>
+                          {log.content && (
+                            <p className="mt-2 text-sm text-gray-600">{log.content}</p>
+                          )}
+                          {log.errorMessage && (
+                            <p className="mt-2 text-sm text-red-600">Erreur: {log.errorMessage}</p>
+                          )}
                         </div>
-                        <div className="ml-3 flex-1">
-                          <p className="text-sm text-gray-900">{activity.description}</p>
-                          <p className="text-xs text-gray-500">{activity.time}</p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Bell className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun rappel</h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Aucun rappel n'a encore été envoyé.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="templates" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Templates de rappels</CardTitle>
+                  <CardDescription>
+                    Créez et gérez vos modèles de messages de rappel
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {templatesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Mail className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun template</h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Créez votre premier modèle de rappel.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Paramètres des rappels</CardTitle>
+                  <CardDescription>
+                    Configurez les paramètres d'envoi automatique des rappels
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Clock className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">Configuration à venir</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Les paramètres de rappels seront bientôt disponibles.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </>
