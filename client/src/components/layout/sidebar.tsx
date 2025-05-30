@@ -28,6 +28,7 @@ export default function Sidebar() {
     { name: "Rappels automatiques", href: "/reminders", icon: Bell },
     { name: "Prise de RDV en ligne", href: "/booking", icon: Globe },
     { name: "Statistiques", href: "/statistics", icon: BarChart3 },
+    { name: "Paramètres", href: "/settings", icon: Settings },
   ];
 
   const isActive = (href: string) => {
