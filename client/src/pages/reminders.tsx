@@ -5,12 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Bell, Mail, MessageSquare, Clock, CheckCircle, XCircle, Plus, Send, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Bell, Mail, MessageSquare, Clock, CheckCircle, XCircle, Plus, Send, AlertTriangle, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import TemplateForm from "@/components/reminders/template-form";
+import type { ReminderTemplate } from "@/lib/types";
 
 export default function Reminders() {
   const [activeTab, setActiveTab] = useState("pending");
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ReminderTemplate | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -51,6 +57,47 @@ export default function Reminders() {
       });
     },
   });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (templateId: number) => {
+      return apiRequest("DELETE", `/api/reminder-templates/${templateId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Modèle supprimé",
+        description: "Le modèle de rappel a été supprimé avec succès.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/reminder-templates"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer le modèle.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditTemplate = (template: ReminderTemplate) => {
+    setSelectedTemplate(template);
+    setShowTemplateForm(true);
+  };
+
+  const handleCreateTemplate = () => {
+    setSelectedTemplate(null);
+    setShowTemplateForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowTemplateForm(false);
+    setSelectedTemplate(null);
+  };
+
+  const handleDeleteTemplate = (templateId: number) => {
+    if (confirm("Êtes-vous sûr de vouloir supprimer ce modèle ?")) {
+      deleteTemplateMutation.mutate(templateId);
+    }
+  };
 
   const sendManualReminderMutation = useMutation({
     mutationFn: async (clientId: number) => {
@@ -234,6 +281,126 @@ export default function Reminders() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="templates" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center">
+                        <Mail className="mr-2 h-5 w-5" />
+                        Modèles de rappels
+                      </CardTitle>
+                      <CardDescription>
+                        Créez et gérez vos modèles de messages personnalisés
+                      </CardDescription>
+                    </div>
+                    <Button onClick={handleCreateTemplate}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nouveau modèle
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {templatesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : reminderTemplates && Array.isArray(reminderTemplates) && reminderTemplates.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nom</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Délai</TableHead>
+                          <TableHead>Statut</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {reminderTemplates.map((template: ReminderTemplate) => (
+                          <TableRow key={template.id}>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{template.name}</div>
+                                {template.type === "email" && template.subject && (
+                                  <div className="text-sm text-gray-500 truncate max-w-xs">
+                                    {template.subject}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {template.type === "email" ? (
+                                <Badge variant="outline">
+                                  <Mail className="w-3 h-3 mr-1" />
+                                  Email
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">
+                                  <MessageSquare className="w-3 h-3 mr-1" />
+                                  SMS
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {template.daysBefore} jour{template.daysBefore > 1 ? 's' : ''} avant
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {template.isActive ? (
+                                <Badge variant="default" className="bg-green-500">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Actif
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">
+                                  Inactif
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditTemplate(template)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteTemplate(template.id)}
+                                  disabled={deleteTemplateMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Mail className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        Aucun modèle de rappel
+                      </h3>
+                      <p className="text-gray-500 mb-4">
+                        Créez votre premier modèle pour automatiser vos rappels
+                      </p>
+                      <Button onClick={handleCreateTemplate}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Créer un modèle
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="logs" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -334,6 +501,21 @@ export default function Reminders() {
           </Tabs>
         </div>
       </main>
+
+      {/* Dialog pour le formulaire de modèles */}
+      <Dialog open={showTemplateForm} onOpenChange={setShowTemplateForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedTemplate ? "Modifier le modèle" : "Nouveau modèle de rappel"}
+            </DialogTitle>
+          </DialogHeader>
+          <TemplateForm
+            template={selectedTemplate}
+            onSuccess={handleCloseForm}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
