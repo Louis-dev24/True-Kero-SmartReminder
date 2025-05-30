@@ -13,6 +13,7 @@ import Reminders from "@/pages/reminders";
 import Booking from "@/pages/booking";
 import Statistics from "@/pages/statistics";
 import Reports from "@/pages/reports";
+import Scheduler from "@/pages/scheduler";
 import CenterSettings from "@/pages/settings";
 import PublicBooking from "@/pages/public-booking";
 import Sidebar from "@/components/layout/sidebar";
@@ -50,6 +51,7 @@ function Router() {
           <Route path="/booking" component={Booking} />
           <Route path="/statistics" component={Statistics} />
           <Route path="/reports" component={Reports} />
+          <Route path="/scheduler" component={Scheduler} />
           <Route path="/settings" component={CenterSettings} />
           <Route component={NotFound} />
         </Switch>

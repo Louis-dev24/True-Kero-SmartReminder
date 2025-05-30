@@ -786,6 +786,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Routes pour le planificateur de tâches
+  app.get('/api/scheduler/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const status = taskScheduler.getTaskStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting scheduler status:", error);
+      res.status(500).json({ message: "Failed to get scheduler status" });
+    }
+  });
+
+  app.post('/api/scheduler/task/:taskId/execute', isAuthenticated, async (req: any, res) => {
+    try {
+      const { taskId } = req.params;
+      const result = await taskScheduler.executeTaskManually(taskId);
+      res.json({
+        message: `Task ${taskId} executed successfully`,
+        result
+      });
+    } catch (error: any) {
+      console.error(`Error executing task ${req.params.taskId}:`, error);
+      res.status(500).json({ message: error.message || "Failed to execute task" });
+    }
+  });
+
+  app.post('/api/scheduler/task/:taskId/enable', isAuthenticated, async (req: any, res) => {
+    try {
+      const { taskId } = req.params;
+      taskScheduler.enableTask(taskId);
+      res.json({ message: `Task ${taskId} enabled` });
+    } catch (error) {
+      console.error(`Error enabling task ${req.params.taskId}:`, error);
+      res.status(500).json({ message: "Failed to enable task" });
+    }
+  });
+
+  app.post('/api/scheduler/task/:taskId/disable', isAuthenticated, async (req: any, res) => {
+    try {
+      const { taskId } = req.params;
+      taskScheduler.disableTask(taskId);
+      res.json({ message: `Task ${taskId} disabled` });
+    } catch (error) {
+      console.error(`Error disabling task ${req.params.taskId}:`, error);
+      res.status(500).json({ message: "Failed to disable task" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

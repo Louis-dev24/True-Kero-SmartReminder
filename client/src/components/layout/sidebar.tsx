@@ -12,6 +12,7 @@ import {
   BarChart3,
   FileText,
   Settings,
+  Clock,
   Menu,
   X
 } from "lucide-react";
