@@ -31,6 +31,7 @@ export default function Sidebar() {
     { name: "Prise de RDV en ligne", href: "/booking", icon: Globe },
     { name: "Statistiques", href: "/statistics", icon: BarChart3 },
     { name: "Rapports et exports", href: "/reports", icon: FileText },
+    { name: "Planificateur", href: "/scheduler", icon: Clock },
     { name: "Paramètres", href: "/settings", icon: Settings },
   ];
 
