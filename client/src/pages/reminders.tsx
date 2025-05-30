@@ -27,7 +27,14 @@ export default function Reminders() {
   });
 
   const sendAutomaticRemindersMutation = useMutation({
-    mutationFn: () => apiRequest('/api/reminders/send-automatic', { method: 'POST' }),
+    mutationFn: async () => {
+      const response = await fetch('/api/reminders/send-automatic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to send reminders');
+      return response.json();
+    },
     onSuccess: (result) => {
       toast({
         title: "Rappels envoyés",
@@ -46,11 +53,15 @@ export default function Reminders() {
   });
 
   const sendManualReminderMutation = useMutation({
-    mutationFn: (clientId: number) => 
-      apiRequest('/api/reminders/send-manual', { 
-        method: 'POST', 
-        body: JSON.stringify({ clientId }) 
-      }),
+    mutationFn: async (clientId: number) => {
+      const response = await fetch('/api/reminders/send-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId })
+      });
+      if (!response.ok) throw new Error('Failed to send reminder');
+      return response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Rappel envoyé",
@@ -166,16 +177,16 @@ export default function Reminders() {
                     <div className="flex items-center justify-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
-                  ) : pendingReminders && pendingReminders.length > 0 ? (
+                  ) : pendingReminders && Array.isArray(pendingReminders) && pendingReminders.length > 0 ? (
                     <div className="space-y-4">
                       <Alert>
                         <Bell className="h-4 w-4" />
                         <AlertDescription>
-                          {pendingReminders.length} client(s) nécessitent un rappel. Vous pouvez les envoyer automatiquement ou individuellement.
+                          {Array.isArray(pendingReminders) ? pendingReminders.length : 0} client(s) nécessitent un rappel. Vous pouvez les envoyer automatiquement ou individuellement.
                         </AlertDescription>
                       </Alert>
                       
-                      {pendingReminders.map((reminder: any) => (
+                      {Array.isArray(pendingReminders) && pendingReminders.map((reminder: any) => (
                         <div key={reminder.client.id} className="border rounded-lg p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
@@ -239,7 +250,7 @@ export default function Reminders() {
                     <div className="flex items-center justify-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
-                  ) : reminderLogs && reminderLogs.length > 0 ? (
+                  ) : reminderLogs && Array.isArray(reminderLogs) && reminderLogs.length > 0 ? (
                     <div className="space-y-4">
                       {reminderLogs.map((log: any) => (
                         <div key={log.id} className="border rounded-lg p-4">

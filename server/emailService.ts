@@ -16,7 +16,7 @@ export interface EmailData {
 export async function sendEmail(emailData: EmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     const { data, error } = await resend.emails.send({
-      from: emailData.from || 'TechControl Pro <noreply@techcontrol.pro>',
+      from: emailData.from || 'TechControl Pro <onboarding@resend.dev>',
       to: emailData.to,
       subject: emailData.subject,
       html: emailData.html,
