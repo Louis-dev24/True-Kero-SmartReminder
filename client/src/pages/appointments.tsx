@@ -153,6 +153,9 @@ export default function Appointments() {
                         locale={fr}
                         className="w-full"
                       />
+                      
+                      {/* Indicateur de capacité pour la date sélectionnée */}
+                      <DayCapacityIndicator date={selectedDate} />
                     </CardContent>
                   </Card>
                 </div>
