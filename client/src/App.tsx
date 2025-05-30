@@ -13,6 +13,7 @@ import Reminders from "@/pages/reminders";
 import Booking from "@/pages/booking";
 import Statistics from "@/pages/statistics";
 import CenterSettings from "@/pages/settings";
+import PublicBooking from "@/pages/public-booking";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
@@ -30,6 +31,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/book/:centerSlug" component={PublicBooking} />
         <Route component={NotFound} />
       </Switch>
     );

@@ -525,6 +525,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public booking routes (no authentication required)
+  app.get('/api/public/center/:centerSlug', async (req, res) => {
+    try {
+      const { centerSlug } = req.params;
+      
+      // Récupérer les informations du centre par son slug
+      const user = await storage.getUserByCenterSlug(centerSlug);
+      if (!user) {
+        return res.status(404).json({ message: "Centre not found" });
+      }
+
+      const centerSettings = await storage.getCenterSettings(user.id);
+      
+      res.json({
+        centerName: user.centerName || "Centre de Contrôle Technique",
+        centerAddress: user.centerAddress,
+        centerPhone: user.centerPhone,
+        centerSlug: user.centerSlug,
+        workingHours: centerSettings?.workingHours || {},
+        appointmentDuration: centerSettings?.appointmentDuration || 30,
+        minBookingNotice: centerSettings?.minBookingNotice || 24
+      });
+    } catch (error) {
+      console.error("Error fetching center info:", error);
+      res.status(500).json({ message: "Failed to fetch center info" });
+    }
+  });
+
+  app.post('/api/public/booking/:centerSlug', async (req, res) => {
+    try {
+      const { centerSlug } = req.params;
+      const bookingData = req.body;
+
+      // Récupérer l'utilisateur (propriétaire du centre)
+      const user = await storage.getUserByCenterSlug(centerSlug);
+      if (!user) {
+        return res.status(404).json({ message: "Centre not found" });
+      }
+
+      // Valider les données de réservation
+      const validatedData = publicBookingSchema.parse(bookingData);
+
+      // Créer le client et le rendez-vous
+      const result = await storage.createPublicBooking(user.id, validatedData);
+
+      // Envoyer une confirmation par email si disponible
+      if (validatedData.email) {
+        try {
+          const { sendEmail } = await import('./emailService');
+          await sendEmail({
+            to: validatedData.email,
+            subject: `Demande de rendez-vous - ${user.centerName || 'Centre de Contrôle Technique'}`,
+            html: `
+              <h2>Demande de rendez-vous reçue</h2>
+              <p>Bonjour ${validatedData.firstName} ${validatedData.lastName},</p>
+              <p>Nous avons bien reçu votre demande de rendez-vous pour le contrôle technique de votre véhicule.</p>
+              <p><strong>Détails de votre demande :</strong></p>
+              <ul>
+                <li>Date souhaitée : ${validatedData.preferredDate}</li>
+                <li>Véhicule : ${validatedData.vehicleBrand || ''} ${validatedData.vehicleModel || ''}</li>
+                <li>Immatriculation : ${validatedData.licensePlate || 'Non renseignée'}</li>
+              </ul>
+              <p>Nous vous contacterons rapidement au ${validatedData.phone} pour confirmer votre rendez-vous.</p>
+              <p>Cordialement,<br>${user.centerName || 'Centre de Contrôle Technique'}</p>
+            `
+          });
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+        }
+      }
+
+      res.status(201).json({
+        message: "Booking request received successfully",
+        appointmentId: result.appointment.id,
+        clientId: result.client.id
+      });
+    } catch (error) {
+      console.error("Error processing public booking:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid booking data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to process booking" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
