@@ -1,5 +1,6 @@
 import { storage } from './storage';
 import { sendEmail, generateReminderEmailHtml } from './emailService';
+import { sendSMS, generateReminderSMSContent } from './smsService';
 import type { Client, ReminderLog } from '@shared/schema';
 
 export interface ReminderCheck {
@@ -80,6 +81,46 @@ export async function sendReminderEmail(userId: string, reminderCheck: ReminderC
   return result.success;
 }
 
+export async function sendReminderSMS(userId: string, reminderCheck: ReminderCheck, centerName: string): Promise<boolean> {
+  const { client, daysTillExpiration, expirationDate } = reminderCheck;
+  
+  if (!client.phone) {
+    console.log(`Client ${client.firstName} ${client.lastName} has no phone number`);
+    return false;
+  }
+
+  const formattedDate = expirationDate.toLocaleDateString('fr-FR');
+  const smsContent = generateReminderSMSContent(
+    `${client.firstName} ${client.lastName}`,
+    centerName,
+    formattedDate,
+    daysTillExpiration
+  );
+
+  const result = await sendSMS({
+    to: client.phone,
+    message: smsContent,
+  });
+
+  // Enregistrer le log du rappel
+  await storage.createReminderLog({
+    userId,
+    clientId: client.id,
+    type: 'sms',
+    status: result.success ? 'sent' : 'failed',
+    content: smsContent,
+    errorMessage: result.error || undefined
+  });
+
+  if (result.success) {
+    console.log(`SMS reminder sent to ${client.phone}`);
+  } else {
+    console.error(`Failed to send SMS to ${client.phone}:`, result.error);
+  }
+
+  return result.success;
+}
+
 export async function processAutomaticReminders(userId: string): Promise<{ sent: number; failed: number; total: number }> {
   try {
     // Récupérer les paramètres du centre (pour le nom)
@@ -93,15 +134,28 @@ export async function processAutomaticReminders(userId: string): Promise<{ sent:
     let failed = 0;
     
     for (const reminder of remindersNeeded) {
-      const success = await sendReminderEmail(userId, reminder, centerName);
-      if (success) {
-        sent++;
-      } else {
-        failed++;
+      // Envoyer email si disponible
+      if (reminder.client.email) {
+        const emailSuccess = await sendReminderEmail(userId, reminder, centerName);
+        if (emailSuccess) {
+          sent++;
+        } else {
+          failed++;
+        }
+      }
+      
+      // Envoyer SMS si disponible
+      if (reminder.client.phone) {
+        const smsSuccess = await sendReminderSMS(userId, reminder, centerName);
+        if (smsSuccess) {
+          sent++;
+        } else {
+          failed++;
+        }
       }
       
       // Petite pause entre les envois pour éviter les limites de taux
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
     
     return {
