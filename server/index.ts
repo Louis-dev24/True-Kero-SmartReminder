@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { taskScheduler } from "./taskScheduler";
 
 const app = express();
 app.use(express.json());
@@ -66,5 +67,18 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Démarrer le planificateur de tâches
+    taskScheduler.start();
+  });
+
+  // Arrêter le planificateur proprement lors de l'arrêt du serveur
+  process.on('SIGTERM', () => {
+    taskScheduler.stop();
+  });
+
+  process.on('SIGINT', () => {
+    taskScheduler.stop();
+    process.exit(0);
   });
 })();
